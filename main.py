@@ -22,11 +22,11 @@ def ocr_space_url(url, overlay=False, api_key=OCR_API_KEY, language='eng'):
     r = requests.post('https://api.ocr.space/parse/image', data=payload)
     return r.json()
 
-# Route pour recevoir une URL d'image et renvoyer le texte extrait
-@app.route('/img2txt', methods=['POST'])
+# Route pour recevoir une URL d'image via GET et renvoyer uniquement le texte extrait
+@app.route('/img2txt', methods=['GET'])
 def img2txt():
-    data = request.get_json()
-    image_url = data.get('image_url')
+    # Extraire l'URL de l'image à partir des paramètres de requête
+    image_url = request.args.get('image_url')
     
     if not image_url:
         return jsonify({"error": "No image URL provided"}), 400
@@ -34,8 +34,14 @@ def img2txt():
     # Appeler l'API OCR.space
     ocr_result = ocr_space_url(url=image_url)
     
-    # Retourner la réponse de l'OCR
-    return jsonify(ocr_result)
+    # Extraire le texte du champ ParsedText
+    try:
+        parsed_text = ocr_result['ParsedResults'][0]['ParsedText']
+    except (KeyError, IndexError):
+        return jsonify({"error": "Could not extract text from the image"}), 500
+    
+    # Retourner uniquement le texte extrait
+    return jsonify({"extracted_text": parsed_text})
 
 # Point d'entrée de l'application Flask
 if __name__ == '__main__':
